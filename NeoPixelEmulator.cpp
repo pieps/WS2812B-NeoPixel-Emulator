@@ -33,6 +33,9 @@ void NeoPixelEmulator::show(void)
     case Grid:
         drawLedGrid();
         break;
+    case DoubleRing:
+        drawDoubleLedRing();
+        break;
     }
     // Double buffering.
     glutSwapBuffers();
@@ -159,6 +162,42 @@ void NeoPixelEmulator::drawLedRing()
         colorPackedToScalar(&R, &G, &B, c);
         drawFilledCircle(xCenter + (circleRadius * cos(i * 2.0f * M_PI / numPixels())),
                          yCenter + (circleRadius * sin(i * 2.0f * M_PI / numPixels())),
+                         ledRadius, R, G, B);
+    }
+}
+
+void NeoPixelEmulator::drawDoubleLedRing() {
+    float x1Center = 250.0f;
+    float y1Center = 500.0f;
+    float x2Center = 750.0f;
+    float y2Center = 500.0f;
+    float maxCircleRadius = 200.0f;
+    float maxLedRadius = 50.0f;
+    float ledToSpaceRatio = 2.0f;
+
+    int pixelsPerRing = numPixels() / 2;
+
+    float ledRadius = maxLedRadius;
+    float circleRadius = pixelsPerRing * (ledRadius * ledToSpaceRatio) / (2.0f * M_PI);
+    if (circleRadius > maxCircleRadius) {
+        circleRadius = maxCircleRadius;
+        float c = circleRadius * 2.0f * M_PI;
+        ledRadius = c / pixelsPerRing / ledToSpaceRatio;
+    }
+    for (int i = 0; i < pixelsPerRing; ++i) {
+        uint32_t c = pixels[i];
+        uint8_t R, G, B;
+        colorPackedToScalar(&R, &G, &B, c);
+        drawFilledCircle(x1Center + (circleRadius * cos(i * 2.0f * M_PI / pixelsPerRing)),
+                         y1Center + (circleRadius * sin(i * 2.0f * M_PI / pixelsPerRing)),
+                         ledRadius, R, G, B);
+    }
+    for (int i = pixelsPerRing; i < numPixels(); ++i) {
+        uint32_t c = pixels[i];
+        uint8_t R, G, B;
+        colorPackedToScalar(&R, &G, &B, c);
+        drawFilledCircle(x2Center + (circleRadius * cos(i * 2.0f * M_PI / pixelsPerRing)),
+                         y2Center + (circleRadius * sin(i * 2.0f * M_PI / pixelsPerRing)),
                          ledRadius, R, G, B);
     }
 }

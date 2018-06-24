@@ -25,6 +25,7 @@ enum PixelLayout {
     Strip,
     Ring,
     Grid,
+    DoubleRing,
 };
 
 class NeoPixelEmulator
@@ -56,6 +57,7 @@ public:
 private:
     void drawLedStrip();
     void drawLedRing();
+    void drawDoubleLedRing();
     void drawLedGrid();
     void drawFilledCircle(float x, float y, float r, u8 R, u8 G, u8 B);
     void __drawFilledCircle(float x, float y, float r);
