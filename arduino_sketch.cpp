@@ -28,15 +28,22 @@ enum Mode {
   MODE_MAX = 6,
 };
 
+enum HueMode {
+  RAINBOW = 0,
+  GLOW = 1,
+  HUE_MODE_MAX = 2,
+};
+
 // Example of wrapping stuff that will only compile in the IDE.
 int8_t  offset = 0; // Position of spinny eyes
-uint32_t rgb  = 0xFF0000; // Start red
 float hue = 0.f;
 uint8_t mode = 0;
 uint32_t prevTime;
 bool color = true;
 int8_t inc = 1;
 uint8_t iterations = 0;
+float glowRate = .0031415926535897932384626433832795;
+uint8_t hueMode = RAINBOW;
 bool forceMode = false;
  
 #ifdef Arduino_h
@@ -61,9 +68,14 @@ void enterMode(uint32_t t) {
 }
 void exitMode(uint32_t t) {
 }
-uint32_t getHue() {
-  hue = fmod(hue + 1, 360.f);
-  return HueToRgb(hue);
+uint32_t getHue(uint32_t t) {
+  switch (hueMode) {
+    case RAINBOW:
+      hue = fmod(hue + 1, 360.f);
+      return HueToRgb(hue);
+    case GLOW:
+      return HueToRgb(0.f, 1.f, fabs(sin(t * glowRate)));
+  }
 }
 
 uint32_t HueToRgb(float h, float s, float v) {
@@ -135,8 +147,8 @@ void ring(uint32_t t) {
     uint32_t c = 0;
     if(((offset + i) & 7) < 2) {
 
-      pixels.setPixelColor(   i, getHue()); // First eye
-      pixels.setPixelColor(31-i, getHue()); // Second eye (flipped)
+      pixels.setPixelColor(   i, getHue(t)); // First eye
+      pixels.setPixelColor(31-i, getHue(t)); // Second eye (flipped)
     }
   }
   pixels.show();
@@ -152,8 +164,8 @@ void fillRing(uint32_t t) {
   for(int8_t i=0; i<16; i++) {
     uint32_t c = 0;
     if(((offset + i) & 7) < 1) {
-      pixels.setPixelColor(   i, color ? getHue() : 0); // First eye
-      pixels.setPixelColor(31-i, color ? getHue() : 0); // Second eye (flipped)
+      pixels.setPixelColor(   i, color ? getHue(t) : 0); // First eye
+      pixels.setPixelColor(31-i, color ? getHue(t) : 0); // Second eye (flipped)
     }
   }
   pixels.show();
@@ -178,10 +190,10 @@ void blink(uint32_t t) {
   resetFrameBuffer();
   for(int8_t i=0; i<8; i++) {
     if(i < offset) {
-      pixels.setPixelColor(i, getHue());
-      pixels.setPixelColor(15 - i, getHue());
-      pixels.setPixelColor(24 + i, getHue());
-      pixels.setPixelColor(23 - i, getHue());
+      pixels.setPixelColor(i, getHue(t));
+      pixels.setPixelColor(15 - i, getHue(t));
+      pixels.setPixelColor(24 + i, getHue(t));
+      pixels.setPixelColor(23 - i, getHue(t));
     }
   }
   pixels.show();
@@ -201,15 +213,15 @@ void quadBlink(uint32_t t) {
   resetFrameBuffer();
   for(int8_t i=0; i<4; i++) {
     if(i < offset) {
-      pixels.setPixelColor(3 - i, getHue());
-      pixels.setPixelColor(4 + i, getHue());
-      pixels.setPixelColor(11 - i, getHue());
-      pixels.setPixelColor(12 + i, getHue());
+      pixels.setPixelColor(3 - i, getHue(t));
+      pixels.setPixelColor(4 + i, getHue(t));
+      pixels.setPixelColor(11 - i, getHue(t));
+      pixels.setPixelColor(12 + i, getHue(t));
 
-      pixels.setPixelColor(28 + i, getHue());
-      pixels.setPixelColor(27 - i, getHue());
-      pixels.setPixelColor(20 + i, getHue());
-      pixels.setPixelColor(19 - i, getHue());
+      pixels.setPixelColor(28 + i, getHue(t));
+      pixels.setPixelColor(27 - i, getHue(t));
+      pixels.setPixelColor(20 + i, getHue(t));
+      pixels.setPixelColor(19 - i, getHue(t));
     }
   }
   pixels.show();
@@ -229,8 +241,8 @@ void tracers(uint32_t t) {
   resetFrameBuffer();
   for (uint8_t i = 0; i < 16; i++) {
     if(((offset + i) & 7) < 2) {
-      pixels.setPixelColor(i, getHue());
-      pixels.setPixelColor(31 - i, getHue());
+      pixels.setPixelColor(i, getHue(t));
+      pixels.setPixelColor(31 - i, getHue(t));
     }
   }
   pixels.show();
@@ -242,16 +254,17 @@ void tracers(uint32_t t) {
 }
 
 void shady(uint32_t t) {
+  hueMode = GLOW;
   resetFrameBuffer();
 
-  pixels.setPixelColor(4 + (inc * 4), redScale(getHue()));
-  pixels.setPixelColor(11 + (-inc * 4), redScale(getHue()));
-  pixels.setPixelColor(20 + (inc * 4), redScale(getHue()));
-  pixels.setPixelColor(27 + (-inc * 4), redScale(getHue()));
+  pixels.setPixelColor(4 + (inc * 4), getHue(t - prevTime));
+  pixels.setPixelColor(11 + (-inc * 4), getHue(t - prevTime));
+  pixels.setPixelColor(20 + (inc * 4), getHue(t - prevTime));
+  pixels.setPixelColor(27 + (-inc * 4), getHue(t - prevTime));
 
   pixels.show();
   delay(50);
-  if (t - prevTime > 500) {
+  if (t - prevTime > 1000) {
     prevTime = t;
     inc *= -1;
     iterations++;
@@ -276,6 +289,7 @@ void nextMode(uint32_t t) {
   offset = 0;
   inc = 1;
   color = true;
+  hueMode = RAINBOW;
   if (!forceMode) {
     mode = (mode + 1) % MODE_MAX;
     iterations = 0;
